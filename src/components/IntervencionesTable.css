@@ -1,0 +1,116 @@
+.table-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: slideUp 0.4s ease;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table thead {
+  background: var(--primary-subtle);
+}
+
+.data-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--primary);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table tbody tr {
+  animation: slideUp 0.3s ease both;
+  transition: var(--transition);
+}
+
+.data-table tbody tr:hover {
+  background: #f8fafd;
+}
+
+.data-table td {
+  padding: 14px 16px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.td-id {
+  font-weight: 700;
+  color: var(--primary) !important;
+  font-size: 0.82rem !important;
+}
+
+.td-date {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.equipo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.equipo-nombre {
+  font-weight: 600;
+}
+
+.equipo-marca {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.td-desc {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.td-tecnicos {
+  font-size: 0.82rem;
+  max-width: 160px;
+}
+
+.td-actions {
+  white-space: nowrap;
+  display: flex;
+  gap: 4px;
+}
+
+.btn-ghost-danger:hover {
+  background: var(--danger-bg) !important;
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+
+.table-footer {
+  padding: 12px 16px;
+  background: #fafbfc;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+}
