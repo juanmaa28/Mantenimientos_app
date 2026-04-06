@@ -34,6 +34,18 @@ export default function IntervencionForm({
         repuesto_id: editData.detalle_intervencion?.[0]?.fk_id_repuesto || '',
         cantidad_usada: editData.detalle_intervencion?.[0]?.cantidad_usada || ''
       })
+    } else {
+      setForm({
+        fk_id_equipo: '',
+        fk_id_tipo_novedad: '',
+        fecha: '',
+        hora_parada: '',
+        descripcion: '',
+        tecnico_id: '',
+        componente_id: '',
+        repuesto_id: '',
+        cantidad_usada: ''
+      })
     }
   }, [editData])
 

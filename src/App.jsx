@@ -113,23 +113,27 @@ function App() {
         if (updateError) throw updateError
 
         // Update technician relation
-        await supabase.from('intervencion_tecnico').delete().eq('fk_id_intervencion', editId)
+        const { error: delTecError } = await supabase.from('intervencion_tecnico').delete().eq('fk_id_intervencion', editId)
+        if (delTecError) throw delTecError
         if (formData.tecnico_id) {
-          await supabase.from('intervencion_tecnico').insert({
+          const { error: insTecError } = await supabase.from('intervencion_tecnico').insert({
             fk_id_intervencion: editId,
             fk_id_tecnico: parseInt(formData.tecnico_id)
           })
+          if (insTecError) throw insTecError
         }
 
         // Update detail relation
-        await supabase.from('detalle_intervencion').delete().eq('fk_id_intervencion', editId)
+        const { error: delDetError } = await supabase.from('detalle_intervencion').delete().eq('fk_id_intervencion', editId)
+        if (delDetError) throw delDetError
         if (formData.componente_id || formData.repuesto_id) {
-          await supabase.from('detalle_intervencion').insert({
+          const { error: insDetError } = await supabase.from('detalle_intervencion').insert({
             fk_id_intervencion: editId,
             fk_id_componente: formData.componente_id ? parseInt(formData.componente_id) : null,
             fk_id_repuesto: formData.repuesto_id ? parseInt(formData.repuesto_id) : null,
             cantidad_usada: formData.cantidad_usada ? parseInt(formData.cantidad_usada) : null
           })
+          if (insDetError) throw insDetError
         }
 
         showToast('Intervención actualizada correctamente')
@@ -153,20 +157,22 @@ function App() {
 
         // Insert technician relation
         if (formData.tecnico_id) {
-          await supabase.from('intervencion_tecnico').insert({
+          const { error: tecError } = await supabase.from('intervencion_tecnico').insert({
             fk_id_intervencion: newId,
             fk_id_tecnico: parseInt(formData.tecnico_id)
           })
+          if (tecError) throw tecError
         }
 
         // Insert detail relation
         if (formData.componente_id || formData.repuesto_id) {
-          await supabase.from('detalle_intervencion').insert({
+          const { error: detError } = await supabase.from('detalle_intervencion').insert({
             fk_id_intervencion: newId,
             fk_id_componente: formData.componente_id ? parseInt(formData.componente_id) : null,
             fk_id_repuesto: formData.repuesto_id ? parseInt(formData.repuesto_id) : null,
             cantidad_usada: formData.cantidad_usada ? parseInt(formData.cantidad_usada) : null
           })
+          if (detError) throw detError
         }
 
         showToast('Intervención registrada correctamente')
