@@ -304,22 +304,11 @@ h1, h2, h3, h4 {
   letter-spacing: 0.3px;
 }
 
-.badge-blue {
-  background: var(--info-bg);
-  color: var(--info);
-}
-
-.badge-green {
-  background: var(--success-bg);
-  color: var(--success);
-}
-
-.badge-yellow {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-
+.badge-blue,
+.badge-green,
+.badge-yellow,
 .badge-red {
-  background: var(--danger-bg);
-  color: var(--danger);
+  background: transparent;
+  color: #444;
+  padding: 0;
 }
