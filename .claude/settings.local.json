@@ -5,7 +5,9 @@
       "Bash(npm run:*)",
       "Bash(node:*)",
       "Bash(curl -s \"https://tcjkargroawcoprmwcfu.supabase.co/rest/v1/?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjamthcmdyb2F3Y29wcm13Y2Z1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY0NTcsImV4cCI6MjA4ODk5MjQ1N30.3kV4vA6qomHNTANQ6HLDYOq6kp7_FWO3vKTQM1vXvT8\")",
-      "Bash(python -m json.tool)"
+      "Bash(python -m json.tool)",
+      "Bash(npm install *)",
+      "Bash(npx vite *)"
     ]
   }
 }

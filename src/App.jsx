@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabaseClient'
 import { Icons } from './components/Icons'
 import Header from './components/Header'
 import IntervencionesTable from './components/IntervencionesTable'
 import IntervencionForm from './components/IntervencionForm'
-import DeleteModal from './components/DeleteModal'
 import Toast from './components/Toast'
+import UndoDeleteToast from './components/UndoDeleteToast'
+import Graficas from './components/Graficas'
 import './App.css'
 
 function App() {
@@ -21,9 +22,11 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editData, setEditData] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
   const [toast, setToast] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState('intervenciones')
+  const deleteTimerRef = useRef(null)
 
   // Show toast
   const showToast = (message, type = 'success') => {
@@ -187,26 +190,28 @@ function App() {
     }
   }
 
-  // Delete
-  const handleDelete = async () => {
-    if (!deleteTarget) return
+  // Start delete countdown — actual DB delete fires after 5s unless undone
+  const handleDeleteWithUndo = (item) => {
+    clearTimeout(deleteTimerRef.current)
+    setPendingDelete(item)
+    deleteTimerRef.current = setTimeout(() => {
+      executeDelete(item)
+    }, 5000)
+  }
 
+  const handleUndoDelete = () => {
+    clearTimeout(deleteTimerRef.current)
+    setPendingDelete(null)
+  }
+
+  const executeDelete = async (item) => {
+    setPendingDelete(null)
+    const id = item.id_intervencion
     try {
-      const id = deleteTarget.id_intervencion
-
-      // Delete related records first
       await supabase.from('intervencion_tecnico').delete().eq('fk_id_intervencion', id)
       await supabase.from('detalle_intervencion').delete().eq('fk_id_intervencion', id)
-
-      const { error } = await supabase
-        .from('intervenciones')
-        .delete()
-        .eq('id_intervencion', id)
-
+      const { error } = await supabase.from('intervenciones').delete().eq('id_intervencion', id)
       if (error) throw error
-
-      showToast('Intervención eliminada correctamente')
-      setDeleteTarget(null)
       fetchIntervenciones()
     } catch (error) {
       console.error('Error deleting:', error)
@@ -214,8 +219,9 @@ function App() {
     }
   }
 
-  // Filter interventions by search
+  // Filter interventions by search (exclude pending-delete row)
   const filteredIntervenciones = intervenciones.filter(item => {
+    if (pendingDelete && item.id_intervencion === pendingDelete.id_intervencion) return false
     if (!searchTerm) return true
     const term = searchTerm.toLowerCase()
     return (
@@ -232,75 +238,109 @@ function App() {
       <Header />
 
       <main className="main-content">
-        {/* Toolbar */}
-        <div className="toolbar">
-          <div className="toolbar-left">
-            <h2 className="page-title">Intervenciones</h2>
-            <span className="record-count">{intervenciones.length} registros</span>
-          </div>
-          <div className="toolbar-right">
-            <div className="search-box">
-              <span className="search-icon">{Icons.search}</span>
-              <input
-                type="text"
-                placeholder="Buscar por equipo, tipo, técnico..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              {searchTerm && (
-                <button className="search-clear" onClick={() => setSearchTerm('')}>
-                  {Icons.close}
-                </button>
-              )}
-            </div>
-            <button className="btn btn-primary btn-lg" onClick={handleNew}>
-              {Icons.plus}
-              <span>Nueva Intervención</span>
-            </button>
-          </div>
+        {/* Tab navigation */}
+        <div className="tab-nav">
+          <button
+            className={`tab-btn ${activeTab === 'intervenciones' ? 'tab-btn--active' : ''}`}
+            onClick={() => setActiveTab('intervenciones')}
+          >
+            {Icons.list}
+            <span>Intervenciones</span>
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'graficas' ? 'tab-btn--active' : ''}`}
+            onClick={() => setActiveTab('graficas')}
+          >
+            {Icons.barChart}
+            <span>Gráficas</span>
+          </button>
         </div>
 
-        {/* Table */}
-        <IntervencionesTable
-          intervenciones={filteredIntervenciones}
-          loading={loading}
-          onEdit={handleEdit}
-          onDelete={setDeleteTarget}
-        />
+        {activeTab === 'intervenciones' && (
+          <>
+            {/* Toolbar */}
+            <div className="toolbar">
+              <div className="toolbar-left">
+                <h2 className="page-title">Intervenciones</h2>
+                <span className="record-count">{intervenciones.length} registros</span>
+              </div>
+              <div className="toolbar-right">
+                <div className="search-box">
+                  <span className="search-icon">{Icons.search}</span>
+                  <input
+                    type="text"
+                    placeholder="Buscar por equipo, tipo, técnico..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                  {searchTerm && (
+                    <button className="search-clear" onClick={() => setSearchTerm('')}>
+                      {Icons.close}
+                    </button>
+                  )}
+                </div>
+                <button className="btn btn-primary btn-lg" onClick={handleNew}>
+                  {Icons.plus}
+                  <span>Nueva Intervención</span>
+                </button>
+              </div>
+            </div>
 
-        {/* Stats cards */}
-        {!loading && intervenciones.length > 0 && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">{Icons.fileText}</div>
-              <div className="stat-data">
-                <span className="stat-value">{intervenciones.length}</span>
-                <span className="stat-label">Total Intervenciones</span>
+            {/* Table */}
+            <IntervencionesTable
+              intervenciones={filteredIntervenciones}
+              loading={loading}
+              onEdit={handleEdit}
+              onDelete={handleDeleteWithUndo}
+            />
+
+            {/* Stats cards */}
+            {!loading && intervenciones.length > 0 && (
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon">{Icons.fileText}</div>
+                  <div className="stat-data">
+                    <span className="stat-value">{intervenciones.length}</span>
+                    <span className="stat-label">Total Intervenciones</span>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">{Icons.box}</div>
+                  <div className="stat-data">
+                    <span className="stat-value">{equipos.length}</span>
+                    <span className="stat-label">Equipos Registrados</span>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">{Icons.users}</div>
+                  <div className="stat-data">
+                    <span className="stat-value">{tecnicos.length}</span>
+                    <span className="stat-label">Técnicos</span>
+                  </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-icon">{Icons.wrench}</div>
+                  <div className="stat-data">
+                    <span className="stat-value">{repuestos.length}</span>
+                    <span className="stat-label">Repuestos</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'graficas' && (
+          <>
+            <div className="toolbar">
+              <div className="toolbar-left">
+                <h2 className="page-title">Gráficas</h2>
+                <span className="record-count">{intervenciones.length} registros analizados</span>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon">{Icons.box}</div>
-              <div className="stat-data">
-                <span className="stat-value">{equipos.length}</span>
-                <span className="stat-label">Equipos Registrados</span>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">{Icons.users}</div>
-              <div className="stat-data">
-                <span className="stat-value">{tecnicos.length}</span>
-                <span className="stat-label">Técnicos</span>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon">{Icons.wrench}</div>
-              <div className="stat-data">
-                <span className="stat-value">{repuestos.length}</span>
-                <span className="stat-label">Repuestos</span>
-              </div>
-            </div>
-          </div>
+            <Graficas intervenciones={intervenciones} />
+          </>
         )}
       </main>
 
@@ -322,11 +362,12 @@ function App() {
         />
       )}
 
-      {deleteTarget && (
-        <DeleteModal
-          intervencion={deleteTarget}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
+      {/* Undo delete toast */}
+      {pendingDelete && (
+        <UndoDeleteToast
+          intervencion={pendingDelete}
+          onUndo={handleUndoDelete}
+          onClose={() => setPendingDelete(null)}
         />
       )}
 

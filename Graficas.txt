@@ -1,0 +1,45 @@
+1. Fallas por tipo
+Tipo de gráfica: barras
+Eje X: tipos de falla
+Eje Y: cantidad de ocurrencias
+
+2. Tiempo promedio de mantenimiento
+Tipo de gráfica: línea
+Eje X: tiempo (fechas o periodos)
+Eje Y: duración promedio del mantenimiento
+
+3. Piezas que más fallan por compresor
+Tipo de gráfica: barras horizontales
+Eje Y: piezas o componentes
+Eje X: cantidad de fallas
+
+4. Repuestos más utilizados
+Tipo de gráfica: barras o circular
+Variable: tipo de repuesto
+Medida: frecuencia de uso
+
+5. Distribución de fallas por criticidad
+Tipo de gráfica: circular (pastel)
+Categorías: leve, media, crítica
+Medida: proporción de cada categoría
+Propósito: entender el nivel de impacto de las fallas
+
+1. Fallas por tipo
+
+Esta gráfica permite visualizar la frecuencia con la que ocurre cada tipo de falla registrada en los compresores. A través de la comparación entre categorías, el usuario puede identificar rápidamente cuáles son las fallas más recurrentes dentro del sistema. Esta información es clave para detectar patrones repetitivos, priorizar acciones correctivas y enfocar estrategias de mantenimiento preventivo en los problemas más comunes.
+
+2. Tiempo promedio de mantenimiento
+
+Esta visualización muestra cómo varía el tiempo promedio de las intervenciones de mantenimiento a lo largo del tiempo. Permite analizar tendencias, identificar periodos donde los mantenimientos toman más o menos tiempo de lo habitual y evaluar la eficiencia operativa del equipo técnico. Es útil para detectar posibles retrasos, mejoras en los procesos o cambios en la complejidad de las intervenciones.
+
+3. Piezas que más fallan por compresor
+
+Esta gráfica presenta los componentes que registran mayor cantidad de fallas, diferenciados por cada compresor. Su objetivo es identificar cuáles piezas son más propensas a fallar en cada equipo, facilitando la detección de componentes críticos. Esta información apoya la toma de decisiones en mantenimiento preventivo, reemplazos programados y optimización del inventario de piezas.
+
+4. Repuestos más utilizados
+
+Esta visualización muestra la frecuencia de uso de los diferentes repuestos empleados en las intervenciones de mantenimiento. Permite identificar cuáles son los insumos más demandados, lo que facilita el análisis del consumo y la planificación del inventario. Además, ayuda a evitar faltantes de repuestos críticos y a mejorar la gestión logística del mantenimiento.
+
+5. Distribución de fallas por criticidad
+
+Esta gráfica representa la proporción de fallas clasificadas según su nivel de criticidad (leve, media o crítica). Su objetivo es ofrecer una visión clara del impacto general de los eventos registrados, permitiendo identificar qué tan graves son las fallas que ocurren en los compresores. Esta información es fundamental para priorizar intervenciones, gestionar riesgos operativos y enfocar recursos en los problemas de mayor impacto.
