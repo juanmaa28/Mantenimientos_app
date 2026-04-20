@@ -58,6 +58,16 @@
   color: #fff;
 }
 
+/* ===== Tab Content ===== */
+.tab-content {
+  animation: tabFadeIn 0.22s ease;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ===== Toolbar ===== */
 .toolbar {
   display: flex;

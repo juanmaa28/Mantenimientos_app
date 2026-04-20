@@ -1,6 +1,6 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line,
+  ScatterChart, Scatter,
   PieChart, Pie, Cell,
   LabelList
 } from 'recharts'
@@ -13,19 +13,19 @@ const PIE_COLORS = {
   'Crítica': '#dc2626',
 }
 
-function parseDuracion(horaParada) {
+function parseDuracionMinutos(horaParada) {
   if (!horaParada) return null
   const str = String(horaParada).toLowerCase()
-  let total = 0
+  let totalMin = 0
   const hMatch = str.match(/(\d+(?:\.\d+)?)\s*h/)
   const mMatch = str.match(/(\d+(?:\.\d+)?)\s*m/)
-  if (hMatch) total += parseFloat(hMatch[1])
-  if (mMatch) total += parseFloat(mMatch[1]) / 60
+  if (hMatch) totalMin += parseFloat(hMatch[1]) * 60
+  if (mMatch) totalMin += parseFloat(mMatch[1])
   if (!hMatch && !mMatch) {
     const num = parseFloat(str)
-    if (!isNaN(num)) total = num
+    if (!isNaN(num)) totalMin = num * 60
   }
-  return total > 0 ? total : null
+  return totalMin > 0 ? totalMin : null
 }
 
 function getMonthLabel(fecha) {
@@ -48,11 +48,15 @@ const CustomTooltip = ({ active, payload, label }) => {
   return (
     <div className="chart-tooltip">
       <p className="tooltip-label">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }}>
-          {p.name}: <strong>{typeof p.value === 'number' ? p.value.toFixed(p.value % 1 === 0 ? 0 : 2) : p.value}</strong>
-        </p>
-      ))}
+      {payload.map((p, i) => {
+        const unit = p.name?.includes('min') ? ' min' : ''
+        const val = typeof p.value === 'number' ? Math.round(p.value) : p.value
+        return (
+          <p key={i} style={{ color: p.color }}>
+            {p.name}: <strong>{val}{unit}</strong>
+          </p>
+        )
+      })}
     </div>
   )
 }
@@ -76,27 +80,16 @@ export default function Graficas({ intervenciones }) {
     }, {})
   ).sort((a, b) => b.cantidad - a.cantidad)
 
-  // --- Chart 2: Intervenciones por mes (con duración promedio si disponible) ---
-  const porMes = {}
-  intervenciones.forEach(inv => {
-    const mes = getMonthLabel(inv.fecha)
-    if (!mes) return
-    if (!porMes[mes]) porMes[mes] = { mes, count: 0, totalHoras: 0, conHoras: 0 }
-    porMes[mes].count++
-    const dur = parseDuracion(inv.hora_parada)
-    if (dur !== null) {
-      porMes[mes].totalHoras += dur
-      porMes[mes].conHoras++
-    }
-  })
-  const datosPorMes = Object.values(porMes)
-    .sort((a, b) => a.mes.localeCompare(b.mes))
-    .map(m => ({
-      mes: m.mes,
-      intervenciones: m.count,
-      promHoras: m.conHoras > 0 ? parseFloat((m.totalHoras / m.conHoras).toFixed(2)) : null
+  // --- Chart 2: Hora parada individual por intervención (solo no nulos) ---
+  const datosParada = intervenciones
+    .filter(inv => parseDuracionMinutos(inv.hora_parada) !== null && inv.fecha)
+    .map(inv => ({
+      fecha: inv.fecha,
+      minutos: parseDuracionMinutos(inv.hora_parada),
+      id: inv.id_intervencion,
+      equipo: inv.equipos?.nombre || ''
     }))
-  const tieneDuraciones = datosPorMes.some(d => d.promHoras !== null)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
   // --- Chart 3: Piezas que más fallan ---
   const piezaMap = {}
@@ -168,46 +161,40 @@ export default function Graficas({ intervenciones }) {
       {/* Chart 2 */}
       <div className="chart-card">
         <div className="chart-header">
-          <h3 className="chart-title">
-            {tieneDuraciones ? 'Duración promedio de mantenimiento por mes' : 'Intervenciones por mes'}
-          </h3>
-          <p className="chart-desc">
-            {tieneDuraciones
-              ? 'Horas promedio de parada por mes (basado en hora de parada registrada)'
-              : 'Cantidad de intervenciones registradas por mes'}
-          </p>
+          <h3 className="chart-title">Hora parada por intervención</h3>
+          <p className="chart-desc">Minutos de parada de cada intervención registrada</p>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={datosPorMes} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e5ec" />
-            <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            {tieneDuraciones ? (
-              <Line
-                type="monotone"
-                dataKey="promHoras"
-                name="Horas promedio"
-                stroke="#0b3d91"
-                strokeWidth={2.5}
-                dot={{ r: 5, fill: '#0b3d91' }}
-                activeDot={{ r: 7 }}
-                connectNulls
+        {datosParada.length === 0 ? (
+          <div className="chart-no-data">No hay datos de hora parada registrados</div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <ScatterChart margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e5ec" />
+              <XAxis
+                dataKey="fecha"
+                type="category"
+                tick={{ fontSize: 11 }}
+                tickFormatter={f => f.slice(0, 7)}
+                interval="preserveStartEnd"
               />
-            ) : (
-              <Line
-                type="monotone"
-                dataKey="intervenciones"
-                name="Intervenciones"
-                stroke="#0b3d91"
-                strokeWidth={2.5}
-                dot={{ r: 5, fill: '#0b3d91' }}
-                activeDot={{ r: 7 }}
+              <YAxis dataKey="minutos" unit=" min" tick={{ fontSize: 12 }} />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0].payload
+                  return (
+                    <div className="chart-tooltip">
+                      <p className="tooltip-label">{d.fecha}</p>
+                      <p style={{ color: '#0b3d91' }}>Parada: <strong>{d.minutos} min</strong></p>
+                      {d.equipo && <p style={{ color: '#6b7280', fontSize: '0.8rem' }}>{d.equipo}</p>}
+                    </div>
+                  )
+                }}
               />
-            )}
-          </LineChart>
-        </ResponsiveContainer>
+              <Scatter name="Hora parada" data={datosParada} fill="#0b3d91" />
+            </ScatterChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Chart 3 */}

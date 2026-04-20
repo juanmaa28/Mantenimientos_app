@@ -26,6 +26,11 @@ function App() {
   const [toast, setToast] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('intervenciones')
+
+  const switchTab = (tab) => {
+    setActiveTab(tab)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const deleteTimerRef = useRef(null)
 
   // Show toast
@@ -242,14 +247,14 @@ function App() {
         <div className="tab-nav">
           <button
             className={`tab-btn ${activeTab === 'intervenciones' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('intervenciones')}
+            onClick={() => switchTab('intervenciones')}
           >
             {Icons.list}
             <span>Intervenciones</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'graficas' ? 'tab-btn--active' : ''}`}
-            onClick={() => setActiveTab('graficas')}
+            onClick={() => switchTab('graficas')}
           >
             {Icons.barChart}
             <span>Gráficas</span>
@@ -257,7 +262,7 @@ function App() {
         </div>
 
         {activeTab === 'intervenciones' && (
-          <>
+          <div className="tab-content">
             {/* Toolbar */}
             <div className="toolbar">
               <div className="toolbar-left">
@@ -328,11 +333,11 @@ function App() {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'graficas' && (
-          <>
+          <div className="tab-content">
             <div className="toolbar">
               <div className="toolbar-left">
                 <h2 className="page-title">Gráficas</h2>
@@ -340,7 +345,7 @@ function App() {
               </div>
             </div>
             <Graficas intervenciones={intervenciones} />
-          </>
+          </div>
         )}
       </main>
 
