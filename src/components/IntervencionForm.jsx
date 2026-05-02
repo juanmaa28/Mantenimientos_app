@@ -1,10 +1,45 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Icons } from './Icons'
 import './IntervencionForm.css'
 
+function InlineAdd({ placeholder, onSave, onCancel }) {
+  const [val, setVal] = useState('')
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  const handleSave = async () => {
+    if (!val.trim()) return
+    setSaving(true)
+    await onSave(val.trim())
+    setSaving(false)
+  }
+
+  return (
+    <div className="inline-add">
+      <input
+        ref={inputRef}
+        className="form-input inline-add__input"
+        placeholder={placeholder}
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSave() } if (e.key === 'Escape') onCancel() }}
+      />
+      <button type="button" className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving || !val.trim()}>
+        {saving ? '...' : 'Guardar'}
+      </button>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
+        Cancelar
+      </button>
+    </div>
+  )
+}
+
 export default function IntervencionForm({
   equipos, tecnicos, tiposNovedad, componentes, repuestos,
-  editData, onSave, onCancel
+  editData, onSave, onCancel,
+  onAddTecnico, onAddComponente, onAddRepuesto
 }) {
   const [form, setForm] = useState({
     fk_id_equipo: '',
@@ -20,8 +55,20 @@ export default function IntervencionForm({
 
   const [filteredComponentes, setFilteredComponentes] = useState([])
   const [saving, setSaving] = useState(false)
+  const [addingNew, setAddingNew] = useState({ tecnico: false, componente: false, repuesto: false })
+
+  // Photo state
+  const [fotoFile, setFotoFile] = useState(null)
+  const [fotoPreview, setFotoPreview] = useState(null)
+  const [fotoUrlExistente, setFotoUrlExistente] = useState(null)
+  const [eliminarFoto, setEliminarFoto] = useState(false)
+  const fotoInputRef = useRef(null)
 
   useEffect(() => {
+    setFotoFile(null)
+    setFotoPreview(null)
+    setEliminarFoto(false)
+    setFotoUrlExistente(editData?.foto_url || null)
     if (editData) {
       setForm({
         fk_id_equipo: editData.fk_id_equipo || '',
@@ -51,10 +98,7 @@ export default function IntervencionForm({
 
   useEffect(() => {
     if (form.fk_id_equipo) {
-      const filtered = componentes.filter(
-        c => c.fk_id_equipo === parseInt(form.fk_id_equipo)
-      )
-      setFilteredComponentes(filtered)
+      setFilteredComponentes(componentes.filter(c => c.fk_id_equipo === parseInt(form.fk_id_equipo)))
     } else {
       setFilteredComponentes(componentes)
     }
@@ -65,17 +109,28 @@ export default function IntervencionForm({
     setForm(prev => ({ ...prev, [name]: value }))
   }
 
+  const handleSelectWithNew = (name, value, field) => {
+    if (value === '__new__') {
+      setAddingNew(prev => ({ ...prev, [field]: true }))
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }))
+    }
+  }
+
+  const cancelNew = (field, name) => {
+    setAddingNew(prev => ({ ...prev, [field]: false }))
+    setForm(prev => ({ ...prev, [name]: '' }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    if (!form.fk_id_equipo || !form.fk_id_tipo_novedad || !form.fecha) {
-      alert('Por favor complete los campos obligatorios: Equipo, Tipo de Novedad y Fecha.')
+    if (!form.tecnico_id) {
+      alert('Por favor seleccione un técnico responsable.')
       return
     }
-
     setSaving(true)
     try {
-      await onSave(form, editData?.id_intervencion)
+      await onSave(form, editData?.id_intervencion, { fotoFile, fotoUrlExistente, eliminarFoto })
     } finally {
       setSaving(false)
     }
@@ -149,14 +204,15 @@ export default function IntervencionForm({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Hora de parada</label>
+                <label className="form-label">Hora de parada *</label>
                 <input
                   type="text"
                   name="hora_parada"
                   value={form.hora_parada}
                   onChange={handleChange}
                   className="form-input"
-                  placeholder="Ej: 2 horas, 30 min"
+                  placeholder="Ej: 2h, 30 min, 1h 30m"
+                  required
                 />
               </div>
             </div>
@@ -169,7 +225,7 @@ export default function IntervencionForm({
               Descripción
             </h4>
             <div className="form-group">
-              <label className="form-label">Descripción de la intervención</label>
+              <label className="form-label">Descripción de la intervención *</label>
               <textarea
                 name="descripcion"
                 value={form.descripcion}
@@ -177,6 +233,7 @@ export default function IntervencionForm({
                 className="form-textarea"
                 placeholder="Describa la falla detectada, trabajos realizados, observaciones..."
                 rows={4}
+                required
               />
             </div>
           </div>
@@ -189,20 +246,35 @@ export default function IntervencionForm({
             </h4>
             <div className="form-grid">
               <div className="form-group">
-                <label className="form-label">Técnico responsable</label>
-                <select
-                  name="tecnico_id"
-                  value={form.tecnico_id}
-                  onChange={handleChange}
-                  className="form-select"
-                >
-                  <option value="">Seleccione técnico</option>
-                  {tecnicos.map(t => (
-                    <option key={t.id_tecnico} value={t.id_tecnico}>
-                      {t.nombre} {t.entidad ? `(${t.entidad})` : ''}
-                    </option>
-                  ))}
-                </select>
+                <label className="form-label">Técnico responsable *</label>
+                {addingNew.tecnico ? (
+                  <InlineAdd
+                    placeholder="Nombre del técnico"
+                    onSave={async (nombre) => {
+                      const newId = await onAddTecnico(nombre)
+                      if (newId) {
+                        setForm(prev => ({ ...prev, tecnico_id: newId }))
+                        setAddingNew(prev => ({ ...prev, tecnico: false }))
+                      }
+                    }}
+                    onCancel={() => cancelNew('tecnico', 'tecnico_id')}
+                  />
+                ) : (
+                  <select
+                    name="tecnico_id"
+                    value={form.tecnico_id}
+                    onChange={e => handleSelectWithNew('tecnico_id', e.target.value, 'tecnico')}
+                    className="form-select"
+                  >
+                    <option value="">Seleccione técnico</option>
+                    {tecnicos.map(t => (
+                      <option key={t.id_tecnico} value={t.id_tecnico}>
+                        {t.nombre} {t.entidad ? `(${t.entidad})` : ''}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Añadir otro...</option>
+                  </select>
+                )}
               </div>
             </div>
           </div>
@@ -216,36 +288,66 @@ export default function IntervencionForm({
             <div className="form-grid">
               <div className="form-group">
                 <label className="form-label">Componente afectado</label>
-                <select
-                  name="componente_id"
-                  value={form.componente_id}
-                  onChange={handleChange}
-                  className="form-select"
-                >
-                  <option value="">Seleccione componente</option>
-                  {filteredComponentes.map(c => (
-                    <option key={c.id_componente} value={c.id_componente}>
-                      {c.nombre_componente}
-                    </option>
-                  ))}
-                </select>
+                {addingNew.componente ? (
+                  <InlineAdd
+                    placeholder="Nombre del componente"
+                    onSave={async (nombre) => {
+                      const newId = await onAddComponente(nombre, form.fk_id_equipo)
+                      if (newId) {
+                        setForm(prev => ({ ...prev, componente_id: newId }))
+                        setAddingNew(prev => ({ ...prev, componente: false }))
+                      }
+                    }}
+                    onCancel={() => cancelNew('componente', 'componente_id')}
+                  />
+                ) : (
+                  <select
+                    name="componente_id"
+                    value={form.componente_id}
+                    onChange={e => handleSelectWithNew('componente_id', e.target.value, 'componente')}
+                    className="form-select"
+                  >
+                    <option value="">Seleccione componente</option>
+                    {filteredComponentes.map(c => (
+                      <option key={c.id_componente} value={c.id_componente}>
+                        {c.nombre_componente}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Añadir otro...</option>
+                  </select>
+                )}
               </div>
 
               <div className="form-group">
                 <label className="form-label">Repuesto utilizado</label>
-                <select
-                  name="repuesto_id"
-                  value={form.repuesto_id}
-                  onChange={handleChange}
-                  className="form-select"
-                >
-                  <option value="">Seleccione repuesto</option>
-                  {repuestos.map(r => (
-                    <option key={r.id_repuesto} value={r.id_repuesto}>
-                      {r.nombre_repuesto} {r.referencia ? `(${r.referencia})` : ''}
-                    </option>
-                  ))}
-                </select>
+                {addingNew.repuesto ? (
+                  <InlineAdd
+                    placeholder="Nombre del repuesto"
+                    onSave={async (nombre) => {
+                      const newId = await onAddRepuesto(nombre)
+                      if (newId) {
+                        setForm(prev => ({ ...prev, repuesto_id: newId }))
+                        setAddingNew(prev => ({ ...prev, repuesto: false }))
+                      }
+                    }}
+                    onCancel={() => cancelNew('repuesto', 'repuesto_id')}
+                  />
+                ) : (
+                  <select
+                    name="repuesto_id"
+                    value={form.repuesto_id}
+                    onChange={e => handleSelectWithNew('repuesto_id', e.target.value, 'repuesto')}
+                    className="form-select"
+                  >
+                    <option value="">Seleccione repuesto</option>
+                    {repuestos.map(r => (
+                      <option key={r.id_repuesto} value={r.id_repuesto}>
+                        {r.nombre_repuesto} {r.referencia ? `(${r.referencia})` : ''}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Añadir otro...</option>
+                  </select>
+                )}
               </div>
 
               <div className="form-group">
@@ -260,6 +362,69 @@ export default function IntervencionForm({
                   placeholder="0"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Foto */}
+          <div className="form-section">
+            <h4 className="form-section-title">
+              <span className="section-icon">{Icons.camera}</span>
+              Fotografía
+            </h4>
+            <div className="foto-upload">
+              {/* Preview */}
+              {(fotoPreview || (fotoUrlExistente && !eliminarFoto)) && (
+                <div className="foto-preview-wrap">
+                  <img
+                    src={fotoPreview || fotoUrlExistente}
+                    alt="Foto intervención"
+                    className="foto-preview"
+                  />
+                  <button
+                    type="button"
+                    className="foto-remove"
+                    onClick={() => {
+                      if (fotoFile) {
+                        setFotoFile(null)
+                        setFotoPreview(null)
+                      } else {
+                        setEliminarFoto(true)
+                      }
+                      if (fotoInputRef.current) fotoInputRef.current.value = ''
+                    }}
+                    title="Quitar foto"
+                  >
+                    {Icons.close}
+                  </button>
+                </div>
+              )}
+
+              {/* Upload button */}
+              {!fotoPreview && !(fotoUrlExistente && !eliminarFoto) && (
+                <button
+                  type="button"
+                  className="foto-upload-btn"
+                  onClick={() => fotoInputRef.current?.click()}
+                >
+                  {Icons.camera}
+                  <span>Seleccionar foto</span>
+                </button>
+              )}
+
+              <input
+                ref={fotoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  setFotoFile(file)
+                  setEliminarFoto(false)
+                  setFotoPreview(URL.createObjectURL(file))
+                }}
+              />
+              <p className="foto-hint">JPG, PNG o WebP · máx. 8 MB</p>
             </div>
           </div>
 

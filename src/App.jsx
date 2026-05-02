@@ -102,9 +102,35 @@ function App() {
     setShowForm(true)
   }
 
+  // Storage helpers
+  const uploadFoto = async (file) => {
+    const ext = file.name.split('.').pop()
+    const path = `${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('fotos-intervenciones').upload(path, file)
+    if (error) throw error
+    return supabase.storage.from('fotos-intervenciones').getPublicUrl(path).data.publicUrl
+  }
+
+  const deleteFotoFromStorage = async (fotoUrl) => {
+    if (!fotoUrl) return
+    const path = fotoUrl.split('/fotos-intervenciones/')[1]
+    if (path) await supabase.storage.from('fotos-intervenciones').remove([path])
+  }
+
   // Save (create or update)
-  const handleSave = async (formData, editId) => {
+  const handleSave = async (formData, editId, fotoData = {}) => {
+    const { fotoFile, fotoUrlExistente, eliminarFoto } = fotoData
     try {
+      // Resolve photo URL
+      let fotoUrl = fotoUrlExistente || null
+      if (fotoFile) {
+        if (fotoUrlExistente) await deleteFotoFromStorage(fotoUrlExistente)
+        fotoUrl = await uploadFoto(fotoFile)
+      } else if (eliminarFoto && fotoUrlExistente) {
+        await deleteFotoFromStorage(fotoUrlExistente)
+        fotoUrl = null
+      }
+
       if (editId) {
         // ===== UPDATE =====
         const { error: updateError } = await supabase
@@ -114,7 +140,8 @@ function App() {
             fk_id_tipo_novedad: parseInt(formData.fk_id_tipo_novedad),
             fecha: formData.fecha,
             hora_parada: formData.hora_parada || null,
-            descripcion: formData.descripcion || null
+            descripcion: formData.descripcion || null,
+            foto_url: fotoUrl
           })
           .eq('id_intervencion', editId)
 
@@ -154,7 +181,8 @@ function App() {
             fk_id_tipo_novedad: parseInt(formData.fk_id_tipo_novedad),
             fecha: formData.fecha,
             hora_parada: formData.hora_parada || null,
-            descripcion: formData.descripcion || null
+            descripcion: formData.descripcion || null,
+            foto_url: fotoUrl
           })
           .select()
           .single()
@@ -195,6 +223,30 @@ function App() {
     }
   }
 
+  // Add new reference items inline from the form
+  const handleAddTecnico = async (nombre) => {
+    const { data, error } = await supabase.from('tecnicos').insert({ nombre }).select().single()
+    if (error) { showToast('Error al agregar técnico', 'error'); return null }
+    await fetchReferenceData()
+    return data.id_tecnico
+  }
+
+  const handleAddComponente = async (nombre, equipoId) => {
+    const insert = { nombre_componente: nombre }
+    if (equipoId) insert.fk_id_equipo = parseInt(equipoId)
+    const { data, error } = await supabase.from('componentes').insert(insert).select().single()
+    if (error) { showToast('Error al agregar componente', 'error'); return null }
+    await fetchReferenceData()
+    return data.id_componente
+  }
+
+  const handleAddRepuesto = async (nombre) => {
+    const { data, error } = await supabase.from('repuestos').insert({ nombre_repuesto: nombre }).select().single()
+    if (error) { showToast('Error al agregar repuesto', 'error'); return null }
+    await fetchReferenceData()
+    return data.id_repuesto
+  }
+
   // Start delete countdown — actual DB delete fires after 5s unless undone
   const handleDeleteWithUndo = (item) => {
     clearTimeout(deleteTimerRef.current)
@@ -217,6 +269,7 @@ function App() {
       await supabase.from('detalle_intervencion').delete().eq('fk_id_intervencion', id)
       const { error } = await supabase.from('intervenciones').delete().eq('id_intervencion', id)
       if (error) throw error
+      if (item.foto_url) await deleteFotoFromStorage(item.foto_url)
       fetchIntervenciones()
     } catch (error) {
       console.error('Error deleting:', error)
@@ -364,6 +417,9 @@ function App() {
           editData={editData}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditData(null) }}
+          onAddTecnico={handleAddTecnico}
+          onAddComponente={handleAddComponente}
+          onAddRepuesto={handleAddRepuesto}
         />
       )}
 

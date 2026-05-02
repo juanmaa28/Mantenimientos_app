@@ -41,6 +41,7 @@ export default function IntervencionesTable({ intervenciones, loading, onEdit, o
           <thead>
             <tr>
               <th>ID</th>
+              <th>Foto</th>
               <th>Fecha</th>
               <th>Equipo</th>
               <th>Tipo Novedad</th>
@@ -54,6 +55,15 @@ export default function IntervencionesTable({ intervenciones, loading, onEdit, o
             {intervenciones.map((item, index) => (
               <tr key={item.id_intervencion} style={{ animationDelay: `${index * 0.04}s` }}>
                 <td className="td-id">#{item.id_intervencion}</td>
+                <td className="td-foto">
+                  {item.foto_url ? (
+                    <a href={item.foto_url} target="_blank" rel="noopener noreferrer">
+                      <img src={item.foto_url} alt="foto" className="foto-thumb" />
+                    </a>
+                  ) : (
+                    <span className="foto-empty">{Icons.camera}</span>
+                  )}
+                </td>
                 <td className="td-date">
                   {item.fecha
                     ? new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })

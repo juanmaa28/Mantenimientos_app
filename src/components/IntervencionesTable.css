@@ -107,6 +107,35 @@
   font-weight: 500;
 }
 
+/* Photo column */
+.td-foto {
+  width: 56px;
+  text-align: center;
+}
+
+.foto-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  transition: var(--transition);
+  display: block;
+}
+
+.foto-thumb:hover {
+  transform: scale(1.08);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.foto-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--border);
+}
+
 @media (max-width: 768px) {
   .data-table th,
   .data-table td {
