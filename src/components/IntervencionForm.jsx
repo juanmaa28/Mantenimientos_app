@@ -47,11 +47,13 @@ export default function IntervencionForm({
     fecha: '',
     hora_parada: '',
     descripcion: '',
-    tecnico_id: '',
     componente_id: '',
     repuesto_id: '',
     cantidad_usada: ''
   })
+
+  const [tecnicosIds, setTecnicosIds] = useState([])
+  const [tecnicoSelect, setTecnicoSelect] = useState('')
 
   const [filteredComponentes, setFilteredComponentes] = useState([])
   const [saving, setSaving] = useState(false)
@@ -69,6 +71,13 @@ export default function IntervencionForm({
     setFotoPreview(null)
     setEliminarFoto(false)
     setFotoUrlExistente(editData?.foto_url || null)
+    setTecnicoSelect('')
+    setTecnicosIds(
+      editData?.intervencion_tecnico
+        ?.map(it => it.fk_id_tecnico)
+        .filter(Boolean)
+        .map(String) || []
+    )
     if (editData) {
       setForm({
         fk_id_equipo: editData.fk_id_equipo || '',
@@ -76,7 +85,6 @@ export default function IntervencionForm({
         fecha: editData.fecha || '',
         hora_parada: editData.hora_parada || '',
         descripcion: editData.descripcion || '',
-        tecnico_id: editData.intervencion_tecnico?.[0]?.fk_id_tecnico || '',
         componente_id: editData.detalle_intervencion?.[0]?.fk_id_componente || '',
         repuesto_id: editData.detalle_intervencion?.[0]?.fk_id_repuesto || '',
         cantidad_usada: editData.detalle_intervencion?.[0]?.cantidad_usada || ''
@@ -88,7 +96,6 @@ export default function IntervencionForm({
         fecha: '',
         hora_parada: '',
         descripcion: '',
-        tecnico_id: '',
         componente_id: '',
         repuesto_id: '',
         cantidad_usada: ''
@@ -124,13 +131,13 @@ export default function IntervencionForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.tecnico_id) {
-      alert('Por favor seleccione un técnico responsable.')
+    if (tecnicosIds.length === 0) {
+      alert('Por favor seleccione al menos un técnico responsable.')
       return
     }
     setSaving(true)
     try {
-      await onSave(form, editData?.id_intervencion, { fotoFile, fotoUrlExistente, eliminarFoto })
+      await onSave({ ...form, tecnicos_ids: tecnicosIds }, editData?.id_intervencion, { fotoFile, fotoUrlExistente, eliminarFoto })
     } finally {
       setSaving(false)
     }
@@ -238,45 +245,86 @@ export default function IntervencionForm({
             </div>
           </div>
 
-          {/* Técnico */}
+          {/* Técnicos */}
           <div className="form-section">
             <h4 className="form-section-title">
-              <span className="section-icon">{Icons.user}</span>
-              Responsable
+              <span className="section-icon">{Icons.users}</span>
+              Responsables *
             </h4>
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Técnico responsable *</label>
-                {addingNew.tecnico ? (
-                  <InlineAdd
-                    placeholder="Nombre del técnico"
-                    onSave={async (nombre) => {
-                      const newId = await onAddTecnico(nombre)
-                      if (newId) {
-                        setForm(prev => ({ ...prev, tecnico_id: newId }))
-                        setAddingNew(prev => ({ ...prev, tecnico: false }))
-                      }
-                    }}
-                    onCancel={() => cancelNew('tecnico', 'tecnico_id')}
-                  />
-                ) : (
-                  <select
-                    name="tecnico_id"
-                    value={form.tecnico_id}
-                    onChange={e => handleSelectWithNew('tecnico_id', e.target.value, 'tecnico')}
-                    className="form-select"
-                  >
-                    <option value="">Seleccione técnico</option>
-                    {tecnicos.map(t => (
+
+            {/* Tags de técnicos seleccionados */}
+            {tecnicosIds.length > 0 && (
+              <div className="tecnicos-tags">
+                {tecnicosIds.map(id => {
+                  const t = tecnicos.find(t => String(t.id_tecnico) === String(id))
+                  return (
+                    <span key={id} className="tecnico-tag">
+                      {t ? `${t.nombre}${t.entidad ? ` (${t.entidad})` : ''}` : `#${id}`}
+                      <button
+                        type="button"
+                        className="tecnico-tag__remove"
+                        onClick={() => setTecnicosIds(prev => prev.filter(i => i !== id))}
+                      >
+                        {Icons.close}
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Dropdown + botón agregar */}
+            {addingNew.tecnico ? (
+              <InlineAdd
+                placeholder="Nombre del técnico"
+                onSave={async (nombre) => {
+                  const newId = await onAddTecnico(nombre)
+                  if (newId) {
+                    setTecnicosIds(prev => [...prev, String(newId)])
+                    setAddingNew(prev => ({ ...prev, tecnico: false }))
+                  }
+                }}
+                onCancel={() => setAddingNew(prev => ({ ...prev, tecnico: false }))}
+              />
+            ) : (
+              <div className="tecnicos-add-row">
+                <select
+                  value={tecnicoSelect}
+                  onChange={e => {
+                    if (e.target.value === '__new__') {
+                      setAddingNew(prev => ({ ...prev, tecnico: true }))
+                      setTecnicoSelect('')
+                    } else {
+                      setTecnicoSelect(e.target.value)
+                    }
+                  }}
+                  className="form-select"
+                >
+                  <option value="">Seleccione técnico</option>
+                  {tecnicos
+                    .filter(t => !tecnicosIds.includes(String(t.id_tecnico)))
+                    .map(t => (
                       <option key={t.id_tecnico} value={t.id_tecnico}>
                         {t.nombre} {t.entidad ? `(${t.entidad})` : ''}
                       </option>
                     ))}
-                    <option value="__new__">+ Añadir otro...</option>
-                  </select>
-                )}
+                  <option value="__new__">+ Añadir otro...</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={!tecnicoSelect}
+                  onClick={() => {
+                    if (tecnicoSelect) {
+                      setTecnicosIds(prev => [...prev, tecnicoSelect])
+                      setTecnicoSelect('')
+                    }
+                  }}
+                >
+                  Agregar
+                </button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Repuestos y componentes */}

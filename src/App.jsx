@@ -150,11 +150,10 @@ function App() {
         // Update technician relation
         const { error: delTecError } = await supabase.from('intervencion_tecnico').delete().eq('fk_id_intervencion', editId)
         if (delTecError) throw delTecError
-        if (formData.tecnico_id) {
-          const { error: insTecError } = await supabase.from('intervencion_tecnico').insert({
-            fk_id_intervencion: editId,
-            fk_id_tecnico: parseInt(formData.tecnico_id)
-          })
+        if (formData.tecnicos_ids?.length > 0) {
+          const { error: insTecError } = await supabase.from('intervencion_tecnico').insert(
+            formData.tecnicos_ids.map(id => ({ fk_id_intervencion: editId, fk_id_tecnico: parseInt(id) }))
+          )
           if (insTecError) throw insTecError
         }
 
@@ -192,11 +191,10 @@ function App() {
         const newId = newIntervencion.id_intervencion
 
         // Insert technician relation
-        if (formData.tecnico_id) {
-          const { error: tecError } = await supabase.from('intervencion_tecnico').insert({
-            fk_id_intervencion: newId,
-            fk_id_tecnico: parseInt(formData.tecnico_id)
-          })
+        if (formData.tecnicos_ids?.length > 0) {
+          const { error: tecError } = await supabase.from('intervencion_tecnico').insert(
+            formData.tecnicos_ids.map(id => ({ fk_id_intervencion: newId, fk_id_tecnico: parseInt(id) }))
+          )
           if (tecError) throw tecError
         }
 

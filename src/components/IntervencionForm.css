@@ -218,6 +218,57 @@
   color: var(--text-muted);
 }
 
+/* Technician tags */
+.tecnicos-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.tecnico-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border: 1px solid var(--primary-light);
+  border-radius: 999px;
+  padding: 4px 10px 4px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.tecnico-tag__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--primary);
+  padding: 0;
+  opacity: 0.6;
+  transition: var(--transition);
+  line-height: 1;
+}
+
+.tecnico-tag__remove:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.tecnicos-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tecnicos-add-row .form-select {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Inline add */
 
 .inline-add {
