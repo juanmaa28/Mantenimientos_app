@@ -5,7 +5,7 @@ import './LoginPage.css'
 
 const ADMIN_EMAIL = 'admin@mantenimientos.app'
 
-export default function LoginPage({ onTecnicoLogin }) {
+export default function LoginPage({ onTecnicoLogin, onAdminLogin }) {
   const [step, setStep] = useState(null)
   const [form, setForm] = useState({ password: '', nombre: '', cedula: '' })
   const [error, setError] = useState('')
@@ -24,13 +24,33 @@ export default function LoginPage({ onTecnicoLogin }) {
     e.preventDefault()
     if (!form.password.trim()) { setError('Ingrese la contraseña.'); return }
     setLoading(true)
-    const { error: authError } = await supabase.auth.signInWithPassword({
+
+    const { data: signInData, error: authError } = await supabase.auth.signInWithPassword({
       email: ADMIN_EMAIL,
       password: form.password
     })
-    if (authError) setError('Contraseña incorrecta.')
-    setLoading(false)
-    // Si es exitoso, onAuthStateChange en App.jsx maneja el resto
+
+    if (authError || !signInData?.session) {
+      setError('Contraseña incorrecta.')
+      setLoading(false)
+      return
+    }
+
+    // Cargamos el perfil del admin directamente para no depender del callback
+    const { data: usuario, error: dbError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('auth_id', signInData.session.user.id)
+      .maybeSingle()
+
+    if (dbError || !usuario) {
+      await supabase.auth.signOut()
+      setError('No se encontró el perfil del administrador en la base de datos.')
+      setLoading(false)
+      return
+    }
+
+    onAdminLogin(usuario)
   }
 
   // ── Técnico login: solo cédula contra tabla usuarios ──────────────────────

@@ -19,12 +19,19 @@ function App() {
   const [authReady, setAuthReady] = useState(false)
 
   const loadAdminUser = useCallback(async (authId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('auth_id', authId)
-      .single()
-    setCurrentUser(data || null)
+      .maybeSingle()
+    if (error) console.error('loadAdminUser error:', error)
+    if (data) {
+      setCurrentUser(data)
+    } else {
+      console.warn('No usuarios row matched auth_id', authId)
+      await supabase.auth.signOut()
+      setCurrentUser(null)
+    }
     setAuthReady(true)
   }, [])
 
@@ -45,10 +52,16 @@ function App() {
       else setAuthReady(true)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Si hay sesión de técnico activa en localStorage, ignorar eventos de auth
+      // (esto evita que el callback inicial de Supabase resetee la sesión del técnico)
       if (localStorage.getItem('tecnicoSession')) return
-      if (session) loadAdminUser(session.user.id)
-      else { setCurrentUser(null); setAuthReady(true) }
+      if (event === 'SIGNED_IN' && session) {
+        loadAdminUser(session.user.id)
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null)
+        setAuthReady(true)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -57,6 +70,12 @@ function App() {
   // Llamado por LoginPage cuando un técnico se autentica
   const handleTecnicoLogin = (user) => {
     localStorage.setItem('tecnicoSession', JSON.stringify(user))
+    setCurrentUser(user)
+  }
+
+  // Llamado por LoginPage cuando el admin se autentica (refuerzo por si onAuthStateChange no dispara)
+  const handleAdminLogin = (user) => {
+    localStorage.removeItem('tecnicoSession')
     setCurrentUser(user)
   }
 
@@ -347,7 +366,7 @@ function App() {
       <div className="loading-spinner" />
     </div>
   )
-  if (!currentUser) return <LoginPage onTecnicoLogin={handleTecnicoLogin} />
+  if (!currentUser) return <LoginPage onTecnicoLogin={handleTecnicoLogin} onAdminLogin={handleAdminLogin} />
 
   return (
     <div className="app">
