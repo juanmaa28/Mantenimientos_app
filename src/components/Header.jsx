@@ -26,12 +26,12 @@ export default function Header({ currentUser, onLogout }) {
           {currentUser && (
             <div className="header-user">
               <span className="header-user-icon">
-                {currentUser.role === 'admin' ? Icons.gear : Icons.user}
+                {currentUser.rol === 'admin' ? Icons.gear : Icons.user}
               </span>
               <div className="header-user-info">
                 <span className="header-user-name">{currentUser.nombre}</span>
                 <span className="header-user-role">
-                  {currentUser.role === 'admin' ? 'Administrador' : 'Técnico'}
+                  {currentUser.rol === 'admin' ? 'Administrador' : 'Técnico'}
                 </span>
               </div>
               <button className="header-logout" onClick={onLogout} title="Cerrar sesión">

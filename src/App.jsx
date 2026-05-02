@@ -8,22 +8,62 @@ import Toast from './components/Toast'
 import UndoDeleteToast from './components/UndoDeleteToast'
 import Graficas from './components/Graficas'
 import LoginPage from './components/LoginPage'
+import IntervencionDetalle from './components/IntervencionDetalle'
+import Filtros, { FILTROS_VACIOS, matchesFiltros } from './components/Filtros'
 import './App.css'
 
 function App() {
   // Auth
-  const [currentUser, setCurrentUser] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('currentUser')) } catch { return null }
-  })
+  // Admin → Supabase Auth session  |  Técnico → localStorage
+  const [currentUser, setCurrentUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
 
-  const handleLogin = (user) => {
-    localStorage.setItem('currentUser', JSON.stringify(user))
+  const loadAdminUser = useCallback(async (authId) => {
+    const { data } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('auth_id', authId)
+      .single()
+    setCurrentUser(data || null)
+    setAuthReady(true)
+  }, [])
+
+  useEffect(() => {
+    // Técnico: check localStorage first
+    try {
+      const saved = localStorage.getItem('tecnicoSession')
+      if (saved) {
+        setCurrentUser(JSON.parse(saved))
+        setAuthReady(true)
+        return
+      }
+    } catch { localStorage.removeItem('tecnicoSession') }
+
+    // Admin: Supabase Auth session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) loadAdminUser(session.user.id)
+      else setAuthReady(true)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (localStorage.getItem('tecnicoSession')) return
+      if (session) loadAdminUser(session.user.id)
+      else { setCurrentUser(null); setAuthReady(true) }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [loadAdminUser])
+
+  // Llamado por LoginPage cuando un técnico se autentica
+  const handleTecnicoLogin = (user) => {
+    localStorage.setItem('tecnicoSession', JSON.stringify(user))
     setCurrentUser(user)
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser')
+    localStorage.removeItem('tecnicoSession')
     setCurrentUser(null)
+    supabase.auth.signOut()
   }
 
   // Data states
@@ -38,9 +78,10 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editData, setEditData] = useState(null)
+  const [detalleItem, setDetalleItem] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [toast, setToast] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   const [activeTab, setActiveTab] = useState('intervenciones')
 
   const switchTab = (tab) => {
@@ -88,7 +129,8 @@ function App() {
           *,
           componentes (*),
           repuestos (*)
-        )
+        ),
+        usuarios (id_usuario, nombre, cedula)
       `)
       .order('id_intervencion', { ascending: false })
 
@@ -294,21 +336,18 @@ function App() {
     }
   }
 
-  // Filter interventions by search (exclude pending-delete row)
+  // Filter interventions (exclude pending-delete row)
   const filteredIntervenciones = intervenciones.filter(item => {
     if (pendingDelete && item.id_intervencion === pendingDelete.id_intervencion) return false
-    if (!searchTerm) return true
-    const term = searchTerm.toLowerCase()
-    return (
-      item.equipos?.nombre?.toLowerCase().includes(term) ||
-      item.tipo_novedad?.nombre?.toLowerCase().includes(term) ||
-      item.descripcion?.toLowerCase().includes(term) ||
-      item.intervencion_tecnico?.some(it => it.tecnicos?.nombre?.toLowerCase().includes(term)) ||
-      String(item.id_intervencion).includes(term)
-    )
+    return matchesFiltros(item, filtros)
   })
 
-  if (!currentUser) return <LoginPage onLogin={handleLogin} />
+  if (!authReady) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-subtle, #f8fafd)' }}>
+      <div className="loading-spinner" />
+    </div>
+  )
+  if (!currentUser) return <LoginPage onTecnicoLogin={handleTecnicoLogin} />
 
   return (
     <div className="app">
@@ -339,24 +378,13 @@ function App() {
             <div className="toolbar">
               <div className="toolbar-left">
                 <h2 className="page-title">Intervenciones</h2>
-                <span className="record-count">{intervenciones.length} registros</span>
+                <span className="record-count">
+                  {filteredIntervenciones.length === intervenciones.length
+                    ? `${intervenciones.length} registros`
+                    : `${filteredIntervenciones.length} de ${intervenciones.length} registros`}
+                </span>
               </div>
               <div className="toolbar-right">
-                <div className="search-box">
-                  <span className="search-icon">{Icons.search}</span>
-                  <input
-                    type="text"
-                    placeholder="Buscar por equipo, tipo, técnico..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="search-input"
-                  />
-                  {searchTerm && (
-                    <button className="search-clear" onClick={() => setSearchTerm('')}>
-                      {Icons.close}
-                    </button>
-                  )}
-                </div>
                 <button className="btn btn-primary btn-lg" onClick={handleNew}>
                   {Icons.plus}
                   <span>Nueva Intervención</span>
@@ -364,10 +392,23 @@ function App() {
               </div>
             </div>
 
+            {/* Filtros */}
+            <Filtros
+              filtros={filtros}
+              onFiltrosChange={setFiltros}
+              equipos={equipos}
+              tiposNovedad={tiposNovedad}
+              tecnicos={tecnicos}
+              totalRegistros={intervenciones.length}
+              totalFiltrados={filteredIntervenciones.length}
+            />
+
             {/* Table */}
             <IntervencionesTable
               intervenciones={filteredIntervenciones}
               loading={loading}
+              isAdmin={currentUser?.rol === 'admin'}
+              onView={setDetalleItem}
               onEdit={handleEdit}
               onDelete={handleDeleteWithUndo}
             />
@@ -439,6 +480,15 @@ function App() {
           onAddTecnico={handleAddTecnico}
           onAddComponente={handleAddComponente}
           onAddRepuesto={handleAddRepuesto}
+        />
+      )}
+
+      {/* Detalle */}
+      {detalleItem && (
+        <IntervencionDetalle
+          item={detalleItem}
+          onClose={() => setDetalleItem(null)}
+          onEdit={(item) => { setDetalleItem(null); handleEdit(item) }}
         />
       )}
 

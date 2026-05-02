@@ -1,7 +1,7 @@
 import { Icons } from './Icons'
 import './IntervencionesTable.css'
 
-export default function IntervencionesTable({ intervenciones, loading, onEdit, onDelete }) {
+export default function IntervencionesTable({ intervenciones, loading, isAdmin, onEdit, onDelete, onView }) {
   if (loading) {
     return (
       <div className="table-container">
@@ -95,18 +95,27 @@ export default function IntervencionesTable({ intervenciones, loading, onEdit, o
                 <td className="td-actions">
                   <button
                     className="btn btn-icon btn-ghost"
+                    onClick={() => onView(item)}
+                    title="Ver detalle"
+                  >
+                    {Icons.eye}
+                  </button>
+                  <button
+                    className="btn btn-icon btn-ghost"
                     onClick={() => onEdit(item)}
                     title="Editar"
                   >
                     {Icons.edit}
                   </button>
-                  <button
-                    className="btn btn-icon btn-ghost btn-ghost-danger"
-                    onClick={() => onDelete(item)}
-                    title="Eliminar"
-                  >
-                    {Icons.trash}
-                  </button>
+                  {isAdmin && (
+                    <button
+                      className="btn btn-icon btn-ghost btn-ghost-danger"
+                      onClick={() => onDelete(item)}
+                      title="Eliminar"
+                    >
+                      {Icons.trash}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

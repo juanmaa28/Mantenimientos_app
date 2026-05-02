@@ -1,0 +1,262 @@
+.detalle-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 680px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  animation: scaleIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Header */
+.detalle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.detalle-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detalle-id {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+.detalle-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Body */
+.detalle-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Foto */
+.detalle-foto-wrap {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-subtle, #f8fafd);
+}
+
+.detalle-foto-wrap a {
+  display: block;
+  position: relative;
+}
+
+.detalle-foto {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  transition: opacity 0.2s;
+}
+
+.detalle-foto-wrap a:hover .detalle-foto {
+  opacity: 0.9;
+}
+
+.detalle-foto-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+
+/* Sections */
+.detalle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detalle-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--primary-subtle);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.detalle-section-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+/* Grid */
+.detalle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detalle-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detalle-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detalle-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detalle-value--equipo {
+  font-weight: 700;
+}
+
+.detalle-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Descripción */
+.detalle-descripcion {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  line-height: 1.7;
+  margin: 0;
+  background: var(--bg-subtle, #f8fafd);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  border-left: 3px solid var(--primary-subtle);
+}
+
+/* Técnicos */
+.detalle-tecnicos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detalle-tecnico {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detalle-tecnico-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.detalle-tecnico-nombre {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+}
+
+.detalle-tecnico-entidad {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: block;
+}
+
+.detalle-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Footer info (registrado por) */
+.detalle-footer-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--primary-subtle);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.detalle-registrado-icon {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.detalle-cedula {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .detalle-modal {
+    max-height: 96vh;
+    border-radius: var(--radius-lg);
+  }
+
+  .detalle-header {
+    padding: 16px 18px;
+  }
+
+  .detalle-body {
+    padding: 18px;
+    gap: 20px;
+  }
+
+  .detalle-grid {
+    grid-template-columns: 1fr;
+  }
+}

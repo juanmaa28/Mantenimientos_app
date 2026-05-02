@@ -3,14 +3,11 @@ import { supabase } from '../supabaseClient'
 import { Icons } from './Icons'
 import './LoginPage.css'
 
-const ADMIN_USER = 'admin'
-const ADMIN_PASS = 'Yamaha2025'
-const ADMIN_ID_USUARIO = 1
+const ADMIN_EMAIL = 'admin@mantenimientos.app'
 
-// step: null | 'admin' | 'tecnico-opciones' | 'tecnico-login' | 'tecnico-registro'
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onTecnicoLogin }) {
   const [step, setStep] = useState(null)
-  const [form, setForm] = useState({ usuario: '', password: '', nombre: '', cedula: '' })
+  const [form, setForm] = useState({ password: '', nombre: '', cedula: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
@@ -22,68 +19,61 @@ export default function LoginPage({ onLogin }) {
 
   const back = (to) => { setStep(to); setError('') }
 
-  // ── Admin ──────────────────────────────────────────────────────────────────
-  const handleAdminLogin = (e) => {
+  // ── Admin: Supabase Auth ────────────────────────────────────────────────────
+  const handleAdminLogin = async (e) => {
     e.preventDefault()
-    if (form.usuario === ADMIN_USER && form.password === ADMIN_PASS) {
-      onLogin({ role: 'admin', nombre: 'Administrador', id_usuario: ADMIN_ID_USUARIO })
-    } else {
-      setError('Usuario o contraseña incorrectos.')
-    }
+    if (!form.password.trim()) { setError('Ingrese la contraseña.'); return }
+    setLoading(true)
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password: form.password
+    })
+    if (authError) setError('Contraseña incorrecta.')
+    setLoading(false)
+    // Si es exitoso, onAuthStateChange en App.jsx maneja el resto
   }
 
-  // ── Técnico login (solo cédula) ────────────────────────────────────────────
+  // ── Técnico login: solo cédula contra tabla usuarios ──────────────────────
   const handleTecnicoLogin = async (e) => {
     e.preventDefault()
-    if (!form.cedula.trim()) { setError('Ingrese su cédula.'); return }
+    const cedula = form.cedula.trim()
+    if (!cedula) { setError('Ingrese su cédula.'); return }
     setLoading(true)
-    setError('')
-    try {
-      const { data, error: dbError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('cedula', form.cedula.trim())
-        .eq('rol', 'tecnico')
-        .single()
-
-      if (dbError || !data) {
-        setError('Cédula no encontrada. ¿Es su primera vez? Regístrese.')
-      } else {
-        onLogin({ role: 'tecnico', nombre: data.nombre, id_usuario: data.id_usuario, cedula: data.cedula })
-      }
-    } catch {
-      setError('Error de conexión. Intente de nuevo.')
-    }
+    const { data, error: dbError } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('cedula', cedula)
+      .eq('rol', 'tecnico')
+      .maybeSingle()
     setLoading(false)
+    if (dbError) { setError('Error de conexión. Intente de nuevo.'); return }
+    if (!data) { setError('Cédula no encontrada. ¿Es su primera vez? Regístrese.'); return }
+    onTecnicoLogin(data)
   }
 
-  // ── Técnico registro (nombre + cédula) ────────────────────────────────────
+  // ── Técnico registro: nombre + cédula, sin contraseña ─────────────────────
   const handleTecnicoRegistro = async (e) => {
     e.preventDefault()
-    if (!form.nombre.trim()) { setError('Ingrese su nombre.'); return }
-    if (!form.cedula.trim()) { setError('Ingrese su cédula.'); return }
+    const cedula = form.cedula.trim()
+    const nombre = form.nombre.trim()
+    if (!nombre) { setError('Ingrese su nombre.'); return }
+    if (!cedula) { setError('Ingrese su cédula.'); return }
     setLoading(true)
-    setError('')
-    try {
-      const { data, error: dbError } = await supabase
-        .from('usuarios')
-        .insert({ nombre: form.nombre.trim(), cedula: form.cedula.trim(), rol: 'tecnico' })
-        .select()
-        .single()
-
-      if (dbError) {
-        if (dbError.code === '23505') {
-          setError('Esa cédula ya está registrada. Inicie sesión con su cédula.')
-        } else {
-          setError('No se pudo registrar. Intente de nuevo.')
-        }
-      } else {
-        onLogin({ role: 'tecnico', nombre: data.nombre, id_usuario: data.id_usuario, cedula: data.cedula })
-      }
-    } catch {
-      setError('Error de conexión. Intente de nuevo.')
-    }
+    const { data, error: dbError } = await supabase
+      .from('usuarios')
+      .insert({ nombre, cedula, rol: 'tecnico' })
+      .select()
+      .single()
     setLoading(false)
+    if (dbError) {
+      if (dbError.code === '23505') {
+        setError('Esa cédula ya está registrada. Inicie sesión con su cédula.')
+      } else {
+        setError('No se pudo crear la cuenta. Intente de nuevo.')
+      }
+      return
+    }
+    onTecnicoLogin(data)
   }
 
   return (
@@ -97,7 +87,6 @@ export default function LoginPage({ onLogin }) {
           <p className="login-subtitle">Incolmotos Yamaha</p>
         </div>
 
-        {/* ── Selector de rol ── */}
         {!step && (
           <div className="role-selector">
             <p className="role-prompt">¿Cómo desea ingresar?</p>
@@ -116,34 +105,34 @@ export default function LoginPage({ onLogin }) {
           </div>
         )}
 
-        {/* ── Admin form ── */}
         {step === 'admin' && (
           <form className="login-form" onSubmit={handleAdminLogin}>
             <button type="button" className="login-back" onClick={() => back(null)}>← Volver</button>
             <h2 className="login-form-title">Acceso de Administrador</h2>
             <div className="login-group">
-              <label className="login-label">Usuario</label>
-              <input className="login-input" type="text" name="usuario"
-                value={form.usuario} onChange={handleChange}
-                placeholder="Nombre de usuario" autoComplete="username" autoFocus />
-            </div>
-            <div className="login-group">
               <label className="login-label">Contraseña</label>
               <div className="login-pass-wrap">
-                <input className="login-input" type={showPass ? 'text' : 'password'}
-                  name="password" value={form.password} onChange={handleChange}
-                  placeholder="Contraseña" autoComplete="current-password" />
+                <input
+                  className="login-input"
+                  type={showPass ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Contraseña de administrador"
+                  autoFocus
+                />
                 <button type="button" className="login-pass-toggle" onClick={() => setShowPass(p => !p)}>
                   {showPass ? Icons.x : Icons.check}
                 </button>
               </div>
             </div>
             {error && <p className="login-error">{error}</p>}
-            <button type="submit" className="login-btn">Ingresar</button>
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Verificando...' : 'Ingresar'}
+            </button>
           </form>
         )}
 
-        {/* ── Técnico: opciones ── */}
         {step === 'tecnico-opciones' && (
           <div className="role-selector">
             <button type="button" className="login-back" style={{ marginBottom: 12 }} onClick={() => back(null)}>
@@ -165,16 +154,21 @@ export default function LoginPage({ onLogin }) {
           </div>
         )}
 
-        {/* ── Técnico: login ── */}
         {step === 'tecnico-login' && (
           <form className="login-form" onSubmit={handleTecnicoLogin}>
             <button type="button" className="login-back" onClick={() => back('tecnico-opciones')}>← Volver</button>
             <h2 className="login-form-title">Iniciar sesión</h2>
             <div className="login-group">
               <label className="login-label">Número de cédula</label>
-              <input className="login-input" type="text" name="cedula"
-                value={form.cedula} onChange={handleChange}
-                placeholder="Sin puntos ni espacios" autoFocus />
+              <input
+                className="login-input"
+                type="text"
+                name="cedula"
+                value={form.cedula}
+                onChange={handleChange}
+                placeholder="Sin puntos ni espacios"
+                autoFocus
+              />
             </div>
             {error && <p className="login-error">{error}</p>}
             <button type="submit" className="login-btn" disabled={loading}>
@@ -186,22 +180,32 @@ export default function LoginPage({ onLogin }) {
           </form>
         )}
 
-        {/* ── Técnico: registro ── */}
         {step === 'tecnico-registro' && (
           <form className="login-form" onSubmit={handleTecnicoRegistro}>
             <button type="button" className="login-back" onClick={() => back('tecnico-opciones')}>← Volver</button>
             <h2 className="login-form-title">Crear cuenta</h2>
             <div className="login-group">
               <label className="login-label">Nombre completo</label>
-              <input className="login-input" type="text" name="nombre"
-                value={form.nombre} onChange={handleChange}
-                placeholder="Su nombre y apellido" autoFocus />
+              <input
+                className="login-input"
+                type="text"
+                name="nombre"
+                value={form.nombre}
+                onChange={handleChange}
+                placeholder="Su nombre y apellido"
+                autoFocus
+              />
             </div>
             <div className="login-group">
               <label className="login-label">Número de cédula</label>
-              <input className="login-input" type="text" name="cedula"
-                value={form.cedula} onChange={handleChange}
-                placeholder="Sin puntos ni espacios" />
+              <input
+                className="login-input"
+                type="text"
+                name="cedula"
+                value={form.cedula}
+                onChange={handleChange}
+                placeholder="Sin puntos ni espacios"
+              />
             </div>
             {error && <p className="login-error">{error}</p>}
             <button type="submit" className="login-btn" disabled={loading}>
