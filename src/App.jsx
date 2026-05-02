@@ -7,9 +7,25 @@ import IntervencionForm from './components/IntervencionForm'
 import Toast from './components/Toast'
 import UndoDeleteToast from './components/UndoDeleteToast'
 import Graficas from './components/Graficas'
+import LoginPage from './components/LoginPage'
 import './App.css'
 
 function App() {
+  // Auth
+  const [currentUser, setCurrentUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('currentUser')) } catch { return null }
+  })
+
+  const handleLogin = (user) => {
+    localStorage.setItem('currentUser', JSON.stringify(user))
+    setCurrentUser(user)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser')
+    setCurrentUser(null)
+  }
+
   // Data states
   const [intervenciones, setIntervenciones] = useState([])
   const [equipos, setEquipos] = useState([])
@@ -119,6 +135,7 @@ function App() {
 
   // Save (create or update)
   const handleSave = async (formData, editId, fotoData = {}) => {
+    const idUsuario = currentUser?.id_usuario || null
     const { fotoFile, fotoUrlExistente, eliminarFoto } = fotoData
     try {
       // Resolve photo URL
@@ -141,7 +158,8 @@ function App() {
             fecha: formData.fecha,
             hora_parada: formData.hora_parada || null,
             descripcion: formData.descripcion || null,
-            foto_url: fotoUrl
+            foto_url: fotoUrl,
+            fk_id_usuario: idUsuario
           })
           .eq('id_intervencion', editId)
 
@@ -181,7 +199,8 @@ function App() {
             fecha: formData.fecha,
             hora_parada: formData.hora_parada || null,
             descripcion: formData.descripcion || null,
-            foto_url: fotoUrl
+            foto_url: fotoUrl,
+            fk_id_usuario: idUsuario
           })
           .select()
           .single()
@@ -289,9 +308,11 @@ function App() {
     )
   })
 
+  if (!currentUser) return <LoginPage onLogin={handleLogin} />
+
   return (
     <div className="app">
-      <Header />
+      <Header currentUser={currentUser} onLogout={handleLogout} />
 
       <main className="main-content">
         {/* Tab navigation */}

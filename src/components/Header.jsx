@@ -1,7 +1,7 @@
 import { Icons } from './Icons'
 import './Header.css'
 
-export default function Header() {
+export default function Header({ currentUser, onLogout }) {
   return (
     <header className="app-header">
       <div className="header-content">
@@ -23,6 +23,22 @@ export default function Header() {
               day: 'numeric'
             })}
           </span>
+          {currentUser && (
+            <div className="header-user">
+              <span className="header-user-icon">
+                {currentUser.role === 'admin' ? Icons.gear : Icons.user}
+              </span>
+              <div className="header-user-info">
+                <span className="header-user-name">{currentUser.nombre}</span>
+                <span className="header-user-role">
+                  {currentUser.role === 'admin' ? 'Administrador' : 'Técnico'}
+                </span>
+              </div>
+              <button className="header-logout" onClick={onLogout} title="Cerrar sesión">
+                {Icons.close}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -78,6 +78,7 @@ export default function IntervencionForm({
         .filter(Boolean)
         .map(String) || []
     )
+
     if (editData) {
       setForm({
         fk_id_equipo: editData.fk_id_equipo || '',
