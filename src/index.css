@@ -161,6 +161,12 @@ h1, h2, h3, h4 {
   cursor: not-allowed;
 }
 
+.btn-excel:hover:not(:disabled) {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #86efac;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);

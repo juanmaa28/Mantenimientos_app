@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from './supabaseClient'
 import { Icons } from './components/Icons'
 import Header from './components/Header'
@@ -393,6 +394,37 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const handleDownloadExcel = () => {
+    const headers = ['ID', 'Fecha', 'Equipo', 'Marca', 'Modelo', 'Tipo Novedad', 'Hora Parada', 'Descripcion', 'Tecnicos', 'Componente', 'Repuesto', 'Cantidad Usada', 'Registrado por']
+
+    const rows = filteredIntervenciones.map(item => [
+      item.id_intervencion,
+      item.fecha ? new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      item.equipos?.nombre || '',
+      item.equipos?.marca || '',
+      item.equipos?.modelo || '',
+      item.tipo_novedad?.nombre || '',
+      item.hora_parada || '',
+      item.descripcion || '',
+      item.intervencion_tecnico?.map(it => it.tecnicos?.nombre).filter(Boolean).join(' / ') || '',
+      item.detalle_intervencion?.[0]?.componentes?.nombre_componente || '',
+      item.detalle_intervencion?.[0]?.repuestos?.nombre_repuesto || '',
+      item.detalle_intervencion?.[0]?.cantidad_usada ?? '',
+      item.usuarios?.nombre || ''
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    ws['!cols'] = [
+      { wch: 6 }, { wch: 12 }, { wch: 22 }, { wch: 14 }, { wch: 14 },
+      { wch: 18 }, { wch: 12 }, { wch: 40 }, { wch: 24 },
+      { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 20 }
+    ]
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Intervenciones')
+    XLSX.writeFile(wb, `intervenciones_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   // Filter interventions (exclude pending-delete row)
   const filteredIntervenciones = intervenciones.filter(item => {
     if (pendingDelete && item.id_intervencion === pendingDelete.id_intervencion) return false
@@ -450,6 +482,15 @@ function App() {
                 >
                   {Icons.download}
                   <span>Exportar CSV</span>
+                </button>
+                <button
+                  className="btn btn-secondary btn-lg btn-excel"
+                  onClick={handleDownloadExcel}
+                  disabled={filteredIntervenciones.length === 0}
+                  title="Descargar tabla como Excel"
+                >
+                  {Icons.fileExcel}
+                  <span>Exportar Excel</span>
                 </button>
                 <button className="btn btn-primary btn-lg" onClick={handleNew}>
                   {Icons.plus}
