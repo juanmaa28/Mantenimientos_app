@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Icons } from './Icons'
+import Lightbox from './Lightbox'
 import './IntervencionDetalle.css'
 
 const fmt = (fecha) =>
@@ -18,6 +20,8 @@ const getBadgeClass = (nombre) => {
 }
 
 export default function IntervencionDetalle({ item, onClose, onEdit }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+
   if (!item) return null
 
   const tecnicos = item.intervencion_tecnico?.map(it => it.tecnicos).filter(Boolean) || []
@@ -54,10 +58,11 @@ export default function IntervencionDetalle({ item, onClose, onEdit }) {
           {/* Foto */}
           {item.foto_url && (
             <div className="detalle-foto-wrap">
-              <a href={item.foto_url} target="_blank" rel="noopener noreferrer">
+              <button className="detalle-foto-btn" onClick={() => setLightboxOpen(true)}>
                 <img src={item.foto_url} alt="Fotografía de la intervención" className="detalle-foto" />
                 <span className="detalle-foto-hint">Ver imagen completa</span>
-              </a>
+              </button>
+              <Lightbox url={lightboxOpen ? item.foto_url : null} onClose={() => setLightboxOpen(false)} />
             </div>
           )}
 

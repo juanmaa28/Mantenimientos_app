@@ -58,9 +58,14 @@
   background: var(--bg-subtle, #f8fafd);
 }
 
-.detalle-foto-wrap a {
+.detalle-foto-btn {
   display: block;
   position: relative;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: zoom-in;
 }
 
 .detalle-foto {
@@ -73,7 +78,7 @@
   transition: opacity 0.2s;
 }
 
-.detalle-foto-wrap a:hover .detalle-foto {
+.detalle-foto-btn:hover .detalle-foto {
   opacity: 0.9;
 }
 

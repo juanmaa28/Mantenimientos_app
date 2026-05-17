@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Icons } from './Icons'
+import Lightbox from './Lightbox'
 import './IntervencionesTable.css'
 
 export default function IntervencionesTable({ intervenciones, loading, isAdmin, onEdit, onDelete, onView }) {
+  const [lightboxUrl, setLightboxUrl] = useState(null)
   if (loading) {
     return (
       <div className="table-container">
@@ -57,9 +60,9 @@ export default function IntervencionesTable({ intervenciones, loading, isAdmin, 
                 <td className="td-id">#{item.id_intervencion}</td>
                 <td className="td-foto">
                   {item.foto_url ? (
-                    <a href={item.foto_url} target="_blank" rel="noopener noreferrer">
+                    <button className="foto-thumb-btn" onClick={() => setLightboxUrl(item.foto_url)} title="Ver imagen">
                       <img src={item.foto_url} alt="foto" className="foto-thumb" />
-                    </a>
+                    </button>
                   ) : (
                     <span className="foto-empty">{Icons.camera}</span>
                   )}
@@ -125,6 +128,8 @@ export default function IntervencionesTable({ intervenciones, loading, isAdmin, 
       <div className="table-footer">
         <span>{intervenciones.length} intervención{intervenciones.length !== 1 ? 'es' : ''} registrada{intervenciones.length !== 1 ? 's' : ''}</span>
       </div>
+
+      <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
     </div>
   )
 }

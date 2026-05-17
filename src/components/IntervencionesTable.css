@@ -113,6 +113,14 @@
   text-align: center;
 }
 
+.foto-thumb-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: zoom-in;
+  display: block;
+}
+
 .foto-thumb {
   width: 44px;
   height: 44px;
@@ -123,7 +131,7 @@
   display: block;
 }
 
-.foto-thumb:hover {
+.foto-thumb-btn:hover .foto-thumb {
   transform: scale(1.08);
   box-shadow: var(--shadow-md);
   border-color: var(--primary);
