@@ -355,6 +355,44 @@ function App() {
     }
   }
 
+  const handleDownloadCSV = () => {
+    const headers = ['ID', 'Fecha', 'Equipo', 'Marca', 'Modelo', 'Tipo Novedad', 'Hora Parada', 'Descripcion', 'Tecnicos', 'Componente', 'Repuesto', 'Cantidad Usada', 'Registrado por']
+
+    const escape = (val) => {
+      if (val == null) return ''
+      const str = String(val)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const rows = filteredIntervenciones.map(item => [
+      item.id_intervencion,
+      item.fecha ? new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+      item.equipos?.nombre || '',
+      item.equipos?.marca || '',
+      item.equipos?.modelo || '',
+      item.tipo_novedad?.nombre || '',
+      item.hora_parada || '',
+      item.descripcion || '',
+      item.intervencion_tecnico?.map(it => it.tecnicos?.nombre).filter(Boolean).join(' / ') || '',
+      item.detalle_intervencion?.[0]?.componentes?.nombre_componente || '',
+      item.detalle_intervencion?.[0]?.repuestos?.nombre_repuesto || '',
+      item.detalle_intervencion?.[0]?.cantidad_usada ?? '',
+      item.usuarios?.nombre || ''
+    ])
+
+    const csv = [headers, ...rows].map(row => row.map(escape).join(',')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `intervenciones_${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   // Filter interventions (exclude pending-delete row)
   const filteredIntervenciones = intervenciones.filter(item => {
     if (pendingDelete && item.id_intervencion === pendingDelete.id_intervencion) return false
@@ -404,6 +442,15 @@ function App() {
                 </span>
               </div>
               <div className="toolbar-right">
+                <button
+                  className="btn btn-secondary btn-lg"
+                  onClick={handleDownloadCSV}
+                  disabled={filteredIntervenciones.length === 0}
+                  title="Descargar tabla como CSV"
+                >
+                  {Icons.download}
+                  <span>Exportar CSV</span>
+                </button>
                 <button className="btn btn-primary btn-lg" onClick={handleNew}>
                   {Icons.plus}
                   <span>Nueva Intervención</span>
